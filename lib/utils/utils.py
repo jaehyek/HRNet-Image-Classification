@@ -44,8 +44,7 @@ def create_logger(cfg, cfg_name, phase='train'):
     console = logging.StreamHandler()
     logging.getLogger('').addHandler(console)
 
-    tensorboard_log_dir = Path(cfg.LOG_DIR) / dataset / model / \
-            (cfg_name + '_' + time_str)
+    tensorboard_log_dir = Path(cfg.LOG_DIR) / dataset / model / (cfg_name + '_' + time_str)
     print('=> creating {}'.format(tensorboard_log_dir))
     tensorboard_log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -83,10 +82,8 @@ def get_optimizer(cfg, model):
     return optimizer
 
 
-def save_checkpoint(states, is_best, output_dir,
-                    filename='checkpoint.pth.tar'):
+def save_checkpoint(states, is_best, output_dir, filename='checkpoint.pth.tar'):
     torch.save(states, os.path.join(output_dir, filename))
     if is_best and 'state_dict' in states:
-        torch.save(states['state_dict'],
-                   os.path.join(output_dir, 'model_best.pth.tar'))
+        torch.save(states['state_dict'], os.path.join(output_dir, 'model_best.pth.tar'))
 

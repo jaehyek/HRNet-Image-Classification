@@ -13,7 +13,7 @@ import logging
 
 import torch
 
-from core.evaluate import accuracy
+from lib.core.evaluate import accuracy
 
 
 logger = logging.getLogger(__name__)

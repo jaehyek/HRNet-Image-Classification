@@ -25,16 +25,16 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from tensorboardX import SummaryWriter
 
-import _init_paths
-import models
-from config import config
-from config import update_config
-from core.function import train
-from core.function import validate
-from utils.modelsummary import get_model_summary
-from utils.utils import get_optimizer
-from utils.utils import save_checkpoint
-from utils.utils import create_logger
+import tools._init_paths
+import lib.models
+from lib.config import config
+from lib.config import update_config
+from lib.core.function import train
+from lib.core.function import validate
+from lib.utils.modelsummary import get_model_summary
+from lib.utils.utils import get_optimizer
+from lib.utils.utils import save_checkpoint
+from lib.utils.utils import create_logger
 
 
 def parse_args():
@@ -56,22 +56,21 @@ def parse_args():
     parser.add_argument('--dataDir',
                         help='data directory',
                         type=str,
-                        default='')
+                        default=r'D:\proj_gauge\proj_digit_recog\digit_class_sam')
     parser.add_argument('--testModel',
                         help='testModel',
                         type=str,
                         default='')
 
     args = parser.parse_args()
-    update_config(config, args)
+    update_config(config, args)     # args 정보를  config으로 전달.
 
     return args
 
 def main():
     args = parse_args()
 
-    logger, final_output_dir, tb_log_dir = create_logger(
-        config, args.cfg, 'train')
+    logger, final_output_dir, tb_log_dir = create_logger( config, args.cfg, 'train')
 
     logger.info(pprint.pformat(args))
     logger.info(pprint.pformat(config))
@@ -81,12 +80,12 @@ def main():
     torch.backends.cudnn.deterministic = config.CUDNN.DETERMINISTIC
     torch.backends.cudnn.enabled = config.CUDNN.ENABLED
 
-    model = eval('models.'+config.MODEL.NAME+'.get_cls_net')(
-        config)
+    # get model
+    # model = eval('lib.models.'+config.MODEL.NAME+'.get_cls_net')(config)    # call to models.cls_hrnet.get_cls_net(config)
 
-    dump_input = torch.rand(
-        (1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0])
-    )
+    model = lib.models.cls_hrnet.get_cls_net(config)
+
+    dump_input = torch.rand( (1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0]) )   # torch.Size([1, 3, 224, 224])
     logger.info(get_model_summary(model, dump_input))
 
     # copy model file
@@ -102,7 +101,8 @@ def main():
         'valid_global_steps': 0,
     }
 
-    gpus = list(config.GPUS)
+    # gpus = list(config.GPUS)
+    gpus = [0]
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # define loss function (criterion) and optimizer
@@ -112,34 +112,29 @@ def main():
 
     best_perf = 0.0
     best_model = False
-    last_epoch = config.TRAIN.BEGIN_EPOCH
+    last_epoch = config.TRAIN.BEGIN_EPOCH       # ==> 0
     if config.TRAIN.RESUME:
-        model_state_file = os.path.join(final_output_dir,
-                                        'checkpoint.pth.tar')
+        model_state_file = os.path.join(final_output_dir, 'checkpoint.pth.tar')
         if os.path.isfile(model_state_file):
             checkpoint = torch.load(model_state_file)
             last_epoch = checkpoint['epoch']
             best_perf = checkpoint['perf']
             model.module.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            logger.info("=> loaded checkpoint (epoch {})"
-                        .format(checkpoint['epoch']))
+            logger.info("=> loaded checkpoint (epoch {})".format(checkpoint['epoch']))
             best_model = True
             
     if isinstance(config.TRAIN.LR_STEP, list):
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer, config.TRAIN.LR_STEP, config.TRAIN.LR_FACTOR,
-            last_epoch-1
-        )
+        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, config.TRAIN.LR_STEP, config.TRAIN.LR_FACTOR, last_epoch-1)
     else:
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, config.TRAIN.LR_STEP, config.TRAIN.LR_FACTOR,
-            last_epoch-1
-        )
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.TRAIN.LR_STEP, config.TRAIN.LR_FACTOR, last_epoch-1)
 
     # Data loading code
     traindir = os.path.join(config.DATASET.ROOT, config.DATASET.TRAIN_SET)
     valdir = os.path.join(config.DATASET.ROOT, config.DATASET.TEST_SET)
+
+    traindir = r'D:\proj_gauge\proj_digit_recog\digit_class_sam'
+    valdir = r'D:\proj_gauge\proj_digit_recog\digit_class_val'
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -148,7 +143,7 @@ def main():
         traindir,
         transforms.Compose([
             transforms.RandomResizedCrop(config.MODEL.IMAGE_SIZE[0]),
-            transforms.RandomHorizontalFlip(),
+            # transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
         ])
@@ -174,14 +169,15 @@ def main():
         pin_memory=True
     )
 
-    for epoch in range(last_epoch, config.TRAIN.END_EPOCH):
-        lr_scheduler.step()
+    for epoch in range(last_epoch, config.TRAIN.END_EPOCH):   # ( 0:100)
+
         # train for one epoch
-        train(config, train_loader, model, criterion, optimizer, epoch,
-              final_output_dir, tb_log_dir, writer_dict)
+        train(config, train_loader, model, criterion, optimizer, epoch, final_output_dir, tb_log_dir, writer_dict)
+
         # evaluate on validation set
-        perf_indicator = validate(config, valid_loader, model, criterion,
-                                  final_output_dir, tb_log_dir, writer_dict)
+        perf_indicator = validate(config, valid_loader, model, criterion, final_output_dir, tb_log_dir, writer_dict)
+
+        lr_scheduler.step()
 
         if perf_indicator > best_perf:
             best_perf = perf_indicator
@@ -198,10 +194,8 @@ def main():
             'optimizer': optimizer.state_dict(),
         }, best_model, final_output_dir, filename='checkpoint.pth.tar')
 
-    final_model_state_file = os.path.join(final_output_dir,
-                                          'final_state.pth.tar')
-    logger.info('saving final model state to {}'.format(
-        final_model_state_file))
+    final_model_state_file = os.path.join(final_output_dir, 'final_state.pth.tar')
+    logger.info('saving final model state to {}'.format(final_model_state_file))
     torch.save(model.module.state_dict(), final_model_state_file)
     writer_dict['writer'].close()
 
