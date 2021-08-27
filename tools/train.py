@@ -85,15 +85,15 @@ def main():
 
     model = lib.models.cls_hrnet.get_cls_net(config)
 
-    dump_input = torch.rand( (1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0]) )   # torch.Size([1, 3, 224, 224])
-    logger.info(get_model_summary(model, dump_input))
+    # dump_input = torch.rand( (1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0]) )   # torch.Size([1, 3, 224, 224])
+    # logger.info(get_model_summary(model, dump_input))
 
     # copy model file
     this_dir = os.path.dirname(__file__)
     models_dst_dir = os.path.join(final_output_dir, 'models')
     if os.path.exists(models_dst_dir):
         shutil.rmtree(models_dst_dir)
-    shutil.copytree(os.path.join(this_dir, '../lib/models'), models_dst_dir)
+    # shutil.copytree(os.path.join(this_dir, '../lib/models'), models_dst_dir)
 
     writer_dict = {
         'writer': SummaryWriter(log_dir=tb_log_dir),
@@ -101,8 +101,8 @@ def main():
         'valid_global_steps': 0,
     }
 
-    # gpus = list(config.GPUS)
-    gpus = [0]
+    gpus = list(config.GPUS)        #
+
     model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
 
     # define loss function (criterion) and optimizer
