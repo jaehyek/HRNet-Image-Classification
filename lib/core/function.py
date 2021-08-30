@@ -14,7 +14,7 @@ import logging
 import torch
 
 from lib.core.evaluate import accuracy
-
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,8 @@ def validate(config, val_loader, model, criterion, output_dir, tb_log_dir, write
             # measure accuracy and record loss
             losses.update(loss.item(), input.size(0))
             prec1, prec5 = accuracy(output, target, (1, 5))
+            if prec1[0] != 100.0 :
+                print(f'pred1 is {np.argmax(output.cpu(), axis=1)}')
             top1.update(prec1[0], input.size(0))
             top5.update(prec5[0], input.size(0))
 

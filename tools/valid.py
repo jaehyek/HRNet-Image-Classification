@@ -24,13 +24,13 @@ import torch.utils.data.distributed
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
-import _init_paths
-import models
-from config import config
-from config import update_config
-from core.function import validate
-from utils.modelsummary import get_model_summary
-from utils.utils import create_logger
+import tools._init_paths
+import lib.models
+from lib.config import config
+from lib.config import update_config
+from lib.core.function import validate
+from lib.utils.modelsummary import get_model_summary
+from lib.utils.utils import create_logger
 
 
 def parse_args():
@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument('--dataDir',
                         help='data directory',
                         type=str,
-                        default='')
+                        default=r'D:\proj_gauge\proj_digit_recog\digit_class_val')
     parser.add_argument('--testModel',
                         help='testModel',
                         type=str,
@@ -66,8 +66,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    logger, final_output_dir, tb_log_dir = create_logger(
-        config, args.cfg, 'valid')
+    logger, final_output_dir, tb_log_dir = create_logger(config, args.cfg, 'valid')
 
     logger.info(pprint.pformat(args))
     logger.info(pprint.pformat(config))
@@ -77,20 +76,17 @@ def main():
     torch.backends.cudnn.deterministic = config.CUDNN.DETERMINISTIC
     torch.backends.cudnn.enabled = config.CUDNN.ENABLED
 
-    model = eval('models.'+config.MODEL.NAME+'.get_cls_net')(
-        config)
+    # model = eval('models.'+config.MODEL.NAME+'.get_cls_net')(config)
+    model = lib.models.cls_hrnet.get_cls_net(config)
 
-    dump_input = torch.rand(
-        (1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0])
-    )
-    logger.info(get_model_summary(model, dump_input))
+    # dump_input = torch.rand((1, 3, config.MODEL.IMAGE_SIZE[1], config.MODEL.IMAGE_SIZE[0]))
+    # logger.info(get_model_summary(model, dump_input))
 
     if config.TEST.MODEL_FILE:
         logger.info('=> loading model from {}'.format(config.TEST.MODEL_FILE))
         model.load_state_dict(torch.load(config.TEST.MODEL_FILE))
     else:
-        model_state_file = os.path.join(final_output_dir,
-                                        'final_state.pth.tar')
+        model_state_file = os.path.join(final_output_dir, 'final_state.pth.tar')
         logger.info('=> loading model from {}'.format(model_state_file))
         model.load_state_dict(torch.load(model_state_file))
 
@@ -101,10 +97,9 @@ def main():
     criterion = torch.nn.CrossEntropyLoss().cuda()
 
     # Data loading code
-    valdir = os.path.join(config.DATASET.ROOT,
-                          config.DATASET.TEST_SET)
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+    valdir = os.path.join(config.DATASET.ROOT, config.DATASET.TEST_SET)
+    valdir = r'D:\proj_gauge\proj_digit_recog\digit_class_val'
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     valid_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
@@ -120,8 +115,7 @@ def main():
     )
 
     # evaluate on validation set
-    validate(config, valid_loader, model, criterion, final_output_dir,
-             tb_log_dir, None)
+    validate(config, valid_loader, model, criterion, final_output_dir, tb_log_dir, None)
 
 
 if __name__ == '__main__':

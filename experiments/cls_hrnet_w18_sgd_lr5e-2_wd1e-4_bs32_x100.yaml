@@ -66,8 +66,8 @@ CUDNN:
 DATASET:
   DATASET: 'imagenet'
   DATA_FORMAT: 'jpg'
-  ROOT: 'data/imagenet/'
-  TEST_SET: 'val'
+  ROOT: ''
+  TEST_SET: ''
   TRAIN_SET: 'train'
 TEST:
   BATCH_SIZE_PER_GPU: 16
