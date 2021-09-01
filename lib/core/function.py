@@ -80,6 +80,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
                 writer.add_scalar('train_top1', top1.val, global_steps)
                 writer_dict['train_global_steps'] = global_steps + 1
 
+    return top1.avg
 
 def validate(config, val_loader, model, criterion, output_dir, tb_log_dir, writer_dict=None):
     batch_time = AverageMeter()
